@@ -65,7 +65,7 @@ MDS.init(function (msg) {
                         //set the date that the MLS will expire
                         var expirydate = setExpiryDate(amount, function (msg) {
                             MDS.log("Set expire date for " + publickey);
-                            x
+
                             //send response to client via maxima
                             sendMaximaMessage(publickey, { "type": "EXPIRY_DATE", "data": { "status": "OK", "expiry_date": expirydate } }, function (msg) {
                                 MDS.log("Sent response to " + publickey);
