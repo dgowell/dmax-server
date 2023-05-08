@@ -31,28 +31,29 @@ function createDB(callback) {
 }
 
 /*
-* Check for expired MLS
-*/
-function checkExpiredMLS(callback) {
-    //Get the UNIX timestamp
+ * Handle expired clients
+ */
+function handleExpiredClients(callback) {
+    // Get the UNIX timestamp
     var now = Math.floor(Date.now() / 1000);
 
-    //Select all the expired clients
+    // Select all the expired clients
     selectExpiredClients(now, function (sqlmsg) {
-        //Loop through them
+        // Loop through them
         for (var i = 0; i < sqlmsg.rows.length; i++) {
             var row = sqlmsg.rows[i];
-            //delete each one
-            deleteClient(row.publickey, function (msg) {
-                MDS.log("Deleted expired client from db" + row.publickey);
+            // Delete each client from the database
+            deleteClientFromDatabase(row.publickey, function (msg) {
+                MDS.log("Deleted expired client from database: " + row.publickey);
             });
-            //remove client permanent address
-            removePermanentAddress(row.publickey, function (msg) {
+            // Remove client's permanent address
+            removeClientPermanentAddress(row.publickey, function (msg) {
                 MDS.log("Removed permanent address for " + row.publickey);
             });
         }
     });
 }
+
 
 
 

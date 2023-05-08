@@ -21,14 +21,13 @@ MDS.init(function (msg) {
             MDS.log("SQL DB inited");
         });
 
-        //run this function at intervals of every 15 seconds
-        setInterval(function () {
-            //Check, remove and delete expired MLS
-            removeExpiredMLS(function (msg) {
-                MDS.log("Checked for expired MLS");
-            });
-        }, 15000);
-        //21600000 6 hours
+    // Run this function at intervals of every 6 hours
+    setInterval(function () {
+    // Check and handle expired clients
+    handleExpiredClients(function (msg) {
+        MDS.log("Handled expired clients");
+    });
+}, 21600000); // 6 hours
 
         //Check rechatter messages
     } else if (msg.event == "MAXIMA") {
