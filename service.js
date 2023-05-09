@@ -60,7 +60,7 @@ MDS.init(function (msg) {
                     });
                 }
 
-                else if (messagetype == "PAYMENT_CONFIRMATION") {
+                else if (messagetype == "PAY_CONFIRM") {
                     // Get the coin id the client has sent
                     var coinId = json.data.coin_id;
 
