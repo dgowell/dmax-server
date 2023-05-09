@@ -80,7 +80,7 @@ MDS.init(function (msg) {
                                     var permAddress = 'MAX#' + publickey + '#' + p2p;
                                     MDS.log('Permanent Address: ' + permAddress);
                                     // Send response to client via maxima
-                                    sendMaximaMessage(permAddress, { "type": "EXPIRY_DATE", "data": { "status": "OK", "expiry_date": expirydate } }, function (msg) {
+                                    sendMaximaMessage(permAddress, { "type": "EXPIRY_DATE", "data": { "status": "OK", "expiry_date": expirydate, "permanent_address": permAddress } }, function (msg) {
                                         MDS.log("Sent response to " + publickey);
                                     });
                                 });
