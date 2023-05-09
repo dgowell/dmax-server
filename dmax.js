@@ -4,11 +4,6 @@
 * @dgowell
 */
 
-/**
- * Global variables
- */
-var SERVER_WALLET = "0x000000000";
-
 
 /**
  * Create the main SQL DB

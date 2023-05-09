@@ -50,6 +50,7 @@ MDS.init(function (msg) {
                 var type = json.type;
 
                 if (type == "P2P_REQUEST") {
+                    MDS.log("P2P_REQUEST message received from " + publickey);
                     // Get the amount from the original P2P_REQUEST
                     var amount = json.data.amount;
                     var contact = json.data.contact;
@@ -61,11 +62,13 @@ MDS.init(function (msg) {
                 }
 
                 else if (messagetype == "PAY_CONFIRM") {
+                    MDS.log("PAY_CONFIRM message received from " + publickey);
                     // Get the coin id the client has sent
                     var coinId = json.data.coin_id;
 
                     // Confirm payment
                     confirmPayment(coinId, function (msg) {
+                        MDS.log("Confirmed payment for " + publickey);
                         var amount = msg.response.amount;
 
                         // Add the clients permanent maxima address
