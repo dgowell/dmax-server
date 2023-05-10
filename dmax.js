@@ -9,12 +9,12 @@
  * Create the main SQL DB
  */
 function createDB(callback) {
-
+    MDS.log("Creating DB");
     //Create the DB if not exists
     var initsql = "CREATE TABLE IF NOT EXISTS `clients` ( "
         + "  `id` bigint auto_increment, "
         + "  `publickey` varchar(512) NOT NULL, "
-        + "  `expirydate` bigint NOT NULL, "
+        + "  `expirydate` bigint NOT NULL "
         + " )";
 
     //Run this..
