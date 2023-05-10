@@ -96,7 +96,7 @@ function deleteClient(pk, callback) {
  * @returns true
 */
 function updateExpiryDate(pk, expirydate, callback) {
-    MDS.sql("UPDATE CLIENTS SET expirydate=" + expirydate + " WHERE publickey='" + pk + "'", function (sqlmsg) {
+    MDS.sql("UPDATE CLIENTS SET expirydate=" + Number(expirydate) + " WHERE publickey='" + pk + "'", function (sqlmsg) {
         if (callback) {
             callback(sqlmsg);
         }
@@ -188,7 +188,7 @@ function setExpiryDate(pk, amount, callback) {
 
     //and add to now
     var expirydate = now + amount;
-
+    MDS.log("Expiry Date: " + expirydate);
     //update expirydate
     updateExpiryDate(pk, expirydate, function (sqlmsg) {
         if (callback) {
