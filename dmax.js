@@ -179,15 +179,15 @@ function confirmPayment(coinId, callback) {
  * @param {*} expirydate
  * @returns true
  */
-function setExpiryDate(pk, amount, callback) {
+function setExpiryDate(pk, days, callback) {
     //get unix timestamp
     var now = Math.floor(Date.now() / 1000);
-
-    //convert whole number amount into days
-    amount = amount * 86400;
+    MDS.log("Days passed in: " + days);
+    //convert whole number amount int   o days
+    unixDays = days * 86400;
 
     //and add to now
-    var expirydate = now + amount;
+    var expirydate = now + unixDays;
     MDS.log("Expiry Date: " + expirydate);
     //update expirydate
     updateExpiryDate(pk, expirydate, function (sqlmsg) {
