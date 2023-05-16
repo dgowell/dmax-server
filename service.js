@@ -15,7 +15,7 @@ const COIN_CHECK_DELAY = 3000; //3 seconds
 //Main message handler..
 MDS.init(function (msg) {
     if (logs) {
-        MDS.log("dmax service received message: " + JSON.stringify(msg));
+        //MDS.log("dmax service received message: " + JSON.stringify(msg));
     }
     //Do initialisation
     if (msg.event == "inited") {
@@ -25,7 +25,6 @@ MDS.init(function (msg) {
             MDS.log("SQL DB inited");
         });
 
-        //Check rechatter messages
     } else if (msg.event == "MAXIMA") {
         if (logs) {
             MDS.log("MAXIMA message received");
@@ -37,10 +36,10 @@ MDS.init(function (msg) {
                 MDS.log("dmax message received");
             }
             //The Maxima user that sent this request
-            var publickey = msg.data.from;
+            var clientPK = msg.data.from;
 
             if (logs) {
-                MDS.log("Public key: " + publickey);
+                MDS.log("Public key: " + clientPK);
             }
             //Convert the data..
             MDS.cmd("convert from:HEX to:String data:" + msg.data.data, function (resp) {
@@ -60,7 +59,7 @@ MDS.init(function (msg) {
 
                 if (type == "P2P_REQUEST") {
                     if (logs) {
-                        MDS.log("P2P_REQUEST message received from " + publickey);
+                        MDS.log("P2P_REQUEST message received from " + clientPK);
                     }
                     // Get the amount from the original P2P_REQUEST
                     var amount = json.data.amount;
@@ -75,72 +74,75 @@ MDS.init(function (msg) {
                 }
 
                 else if (type == "PAY_CONFIRM") {
+
                     if (logs) {
-                        MDS.log("PAY_CONFIRM message received from " + publickey);
+                        MDS.log("PAY_CONFIRM message received from " + clientPK);
                     }
+
                     // Get the coin id the client has sent
                     var coinId = json.data.coin_id;
+                    var amount = json.data.amount;
 
-                    var attempts = 0;
-                    var coinNotFound = true;
-                    while (attempts < COIN_CHECK_MAX_ATTEMPTS && coinNotFound) {
-                        // Confirm payment
-                        setInterval(confirmPayment(coinId, function (msg) {
-                            if (logs) {
-                                MDS.log("Payment confirmed, response: " + JSON.stringify(msg));
-                            }
-                            //check that a coin was found before contuniing
-                            if (msg.status == true) {
-                                coinNotFound = false;
+                    //store payment in the database
+                    storePayment(clientPK, amount, coinId, function (msg) {
+                        if (logs) {
+                            MDS.log("Payment stored in database");
+                        }
 
-                                var coinAmount = msg.response[0].amount;
-                                if (logs) {
-                                    MDS.log("Coin Amount: " + coinAmount);
-                                }
-
-                                // Add the clients permanent maxima address
-                                addPermanentAddress(publickey, function (msg) {
-                                    if (logs) {
-                                        MDS.log("Added permanent address for " + publickey);
-                                    }
-
-                                    var days = coinAmount;
-
-                                    // Set the date that the MLS will expire
-                                    setExpiryDate(days, function (expirydate) {
-                                        if (logs) {
-                                            MDS.log("Set expiry date for " + publickey);
-                                        }
-
-                                        getP2PIdentity(function (p2p) {
-                                            var permAddress = 'MAX#' + publickey + '#' + p2p;
-                                            if (logs) {
-                                                MDS.log("Got P2P identity for " + publickey);
-                                            }
-                                            // Send response to client via maxima
-                                            sendMaximaMessage({ "type": "EXPIRY_DATE", "data": { "status": "OK", "expiry_date": expirydate, "permanent_address": permAddress } }, permAddress, function (msg) {
-                                                if (logs) {
-                                                    MDS.log("Sent expiry date to " + publickey);
-                                                }
-                                            }); //sendMaximaMessage
-                                        }); //getP2PIdentity
-                                    }); //setExpiryDate
-                                }); //addPermanentAddress
-                            } else {
-                                attempts++;
-                                if (attempts == MAX_ATTEMPTS) {
-                                    MDS.log("Could not find coin, max attempts tried!");
-                                }
-                            }
-                        }), COIN_CHECK_DELAY);  //confirmPayment on 10 sec timer
-                    } //endwhile
+                    });
                 } else {
                     if (logs) {
-                        MDS.log("Unknown message type received from " + publickey);
+                        MDS.log("Unknown message type received from " + clientPK);
                     }
                 }
             });
         }
+    } else if (msg.event == "MDS_TIMER_10SECONDS") {
+        //if (logs) { MDS.log("10 second timer"); }
+
+        //Check for unconfirmed payments
+        getUnconfirmedPayments(function (sqlmsg) {
+            if (logs) {
+                MDS.log("Got unconfirmed payments: " + JSON.stringify(sqlmsg));
+            }
+            for (var i = 0; i < sqlmsg.rows.length; i++) {
+                var row = sqlmsg.rows[i];
+                getCoin(row['COINID'], function (coin) {
+                    if (coin.response[0].coinid) {
+                        updateConfirmed(clientPK, function (msg) {
+                            MDS.log("Updated confirmed for: " + clientPK);
+                        });
+
+                        // Add the clients permanent maxima address
+                        addPermanentAddress(clientPK, function (msg) {
+                            if (logs) {
+                                MDS.log("Added permanent address for " + clientPK);
+                            }
+
+                            // Set the date that the MLS will expire
+                            setExpiryDate(coin.response[0].amount, function (expirydate) {
+                                if (logs) {
+                                    MDS.log("Set expiry date for " + clientPK);
+                                }
+
+                                getP2PIdentity(function (p2p) {
+                                    var permAddress = 'MAX#' + clientPK + '#' + p2p;
+                                    if (logs) {
+                                        MDS.log("Got P2P identity for " + clientPK);
+                                    }
+                                    // Send response to client via maxima
+                                    sendMaximaMessage({ "type": "EXPIRY_DATE", "data": { "status": "OK", "expiry_date": expirydate, "permanent_address": permAddress } }, permAddress, function (msg) {
+                                        if (logs) {
+                                            MDS.log("Sent expiry date to " + clientPK);
+                                        }
+                                    }); //sendMaximaMessage
+                                }); //getP2PIdentity
+                            }); //setExpiryDate
+                        }); //addPermanentAddress
+                    } //if
+                }); //confirmPayment
+            } //for
+        }); //getUnconfirmedPayments
     } else if (msg.event == "MDS_TIMER_1HOUR") {
         if (logs) {
             MDS.log("Checking for expired MLS");

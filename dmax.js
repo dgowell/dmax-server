@@ -14,7 +14,11 @@ function createDB(callback) {
     var initsql = "CREATE TABLE IF NOT EXISTS `clients` ( "
         + "  `id` bigint auto_increment, "
         + "  `publickey` varchar(512) NOT NULL, "
-        + "  `expirydate` bigint NOT NULL "
+        + "  `expirydate` bigint NOT NULL, "
+        + "  `createdat` bigint NOT NULL, "
+        + "  `amount` bigint NOT NULL, "
+        + "  `coinid` varchar(512) NOT NULL, "
+        + "  `confirmed` boolean NOT NULL default false "
         + " )";
 
     //Run this..
@@ -162,10 +166,10 @@ function sendMaximaMessage(message, address, callback) {
  * @param {*} callback
  * @returns coin data
  */
-function confirmPayment(coinId, callback) {
+function getCoin(coinId, callback) {
     var maxcmd = "coins coinid:" + coinId;
     MDS.cmd(maxcmd, function (msg) {
-        MDS.log(JSON.stringify(msg));
+        MDS.log(`Coin Data: ${JSON.stringify(msg)}`);
         if (callback) {
             callback(msg);
         }
@@ -212,11 +216,45 @@ function getP2PIdentity(callback) {
 
 
 
+/**
+ * Store Payment Information
+ * @param {*} pk
+ * @param {*} amount
+ * @param {*} coinId
+ * @param {*} callback
+ */
+function storePayment(pk, amount, coinId, callback) {
+    var now = Math.floor(Date.now() / 1000);
+    var initsql = "INSERT INTO CLIENTS (publickey,expirydate,createdat,amount,coinid,confirmed) VALUES ('" + pk + "',0," + now + "," + amount + ",'" + coinId + "',false)";
+    MDS.sql(initsql, function (msg) {
+        MDS.log(`Response from storePayment: ${JSON.stringify(msg)}`);
+        if (callback) {
+            callback(msg);
+        }
+    });
+}
 
+/**
+ * Check all unconfirmed payments
+ * @param {*} callback
+ */
+function getUnconfirmedPayments(callback) {
+    var sql = "SELECT * FROM CLIENTS WHERE confirmed=false";
+    MDS.sql(sql, function (msg) {
+        MDS.log(`Response from getUnconfirmedPayments: ${JSON.stringify(msg)}`);
+        if (callback) {
+            callback(msg);
+        }
+    });
+}
 
-
-
-
-
-
-
+function updateConfirmed(pk, callback) {
+    MDS.log("Updating confirmed for " + pk);
+    var sql = "UPDATE CLIENTS SET confirmed=true WHERE publickey='" + pk + "'";
+    MDS.sql(sql, function (msg) {
+        MDS.log(`Response from updateConfirmed: ${JSON.stringify(msg)}`);
+        if (callback) {
+            callback(msg);
+        }
+    });
+}
