@@ -65,11 +65,18 @@ MDS.init(function (msg) {
                     var amount = json.data.amount;
                     var contact = json.data.contact;
 
-                    // Send response to client via maxima, including the amount
-                    sendMaximaMessage({ "type": "P2P_RESPONSE", "data": { "status": "OK", "amount": amount } }, contact, function (msg) {
+                    //get p2pidentity
+                    getP2PIdentity(function (p2pIdentity) {
                         if (logs) {
-                            MDS.log("Sent response to " + contact);
+                            MDS.log("Got p2pIdentity: " + p2pIdentity);
                         }
+
+                        // Send response to client via maxima, including the amount
+                        sendMaximaMessage({ "type": "P2P_RESPONSE", "data": { "status": "OK", "amount": amount, "p2pidentity": p2pIdentity } }, contact, function (msg) {
+                            if (logs) {
+                                MDS.log("Sent response to " + contact);
+                            }
+                        });
                     });
                 }
 
@@ -107,8 +114,13 @@ MDS.init(function (msg) {
             }
             for (var i = 0; i < sqlmsg.rows.length; i++) {
                 var row = sqlmsg.rows[i];
-                getCoin(row['COINID'], function (coin) {
-                    if (coin.response[0].coinid) {
+                var clientPK = row['PUBLICKEY'];
+                var coinIdFromClient = row['COINID'];
+                MDS.log("Checking coin: " + coinIdFromClient);
+                MDS.log("Checking client: " + clientPK);
+                getCoin(coinIdFromClient, function (coin) {
+                    if (coin.response.length > 0) {
+                        MDS.log("Coin is confirmed: " + coin.response[0].amount);
                         updateConfirmed(clientPK, function (msg) {
                             MDS.log("Updated confirmed for: " + clientPK);
                         });
@@ -118,9 +130,8 @@ MDS.init(function (msg) {
                             if (logs) {
                                 MDS.log("Added permanent address for " + clientPK);
                             }
-
                             // Set the date that the MLS will expire
-                            setExpiryDate(coin.response[0].amount, function (expirydate) {
+                            setExpiryDate(clientPK, coin.response[0].amount, function (expirydate) {
                                 if (logs) {
                                     MDS.log("Set expiry date for " + clientPK);
                                 }
