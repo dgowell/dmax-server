@@ -9,6 +9,7 @@ MDS.load("dmax.js");
 
 //Are we logging data
 var logs = true;
+
 const COIN_CHECK_MAX_ATTEMPTS = 15;
 const COIN_CHECK_DELAY = 3000; //3 seconds
 
@@ -110,7 +111,7 @@ MDS.init(function (msg) {
         //Check for unconfirmed payments
         getUnconfirmedPayments(function (sqlmsg) {
             if (logs) {
-                MDS.log("Got unconfirmed payments: " + JSON.stringify(sqlmsg));
+                MDS.log("confirmed payments: " + JSON.stringify(sqlmsg));
             }
             for (var i = 0; i < sqlmsg.rows.length; i++) {
                 var row = sqlmsg.rows[i];
@@ -131,35 +132,46 @@ MDS.init(function (msg) {
                                 MDS.log("Added permanent address for " + clientPK);
                             }
                             // Set the date that the MLS will expire
-                            setExpiryDate(clientPK, coin.response[0].amount, function (expirydate) {
+                            var days = coin.response[0].amount;
+
+                            setExpiryDate(clientPK, days, function (expirydate) {
                                 if (logs) {
                                     MDS.log("Set expiry date for " + clientPK);
                                 }
 
-                                getP2PIdentity(function (p2p) {
-                                    var permAddress = 'MAX#' + clientPK + '#' + p2p;
+                                //get p2pidentity
+                                getP2PIdentity(function (p2pIdentity) {
                                     if (logs) {
-                                        MDS.log("Got P2P identity for " + clientPK);
+                                        MDS.log("Got p2pIdentity: " + p2pIdentity);
                                     }
+                                    //TODO
+                                    //add in funciton to compose perm address 
+                                    var permAddress = `MAX#${clientPK}#${p2pIdentity}`;
+
                                     // Send response to client via maxima
                                     sendMaximaMessage({ "type": "EXPIRY_DATE", "data": { "status": "OK", "expiry_date": expirydate, "permanent_address": permAddress } }, permAddress, function (msg) {
                                         if (logs) {
                                             MDS.log("Sent expiry date to " + clientPK);
                                         }
                                     }); //sendMaximaMessage
-                                }); //getP2PIdentity
+                                });
                             }); //setExpiryDate
                         }); //addPermanentAddress
                     } //if
                 }); //confirmPayment
             } //for
         }); //getUnconfirmedPayments
+
+        checkExpiredMLS(function (msg) {
+            MDS.log("Checked for expired MLS");
+        });
+
     } else if (msg.event == "MDS_TIMER_1HOUR") {
         if (logs) {
-            MDS.log("Checking for expired MLS");
+            MDS.log("RUNS EVERY HOUR - Checking for expired MLS");
         }
         // //Check, remove and delete expired MLS
-        removeExpiredMLS(function (msg) {
+        checkExpiredMLS(function (msg) {
             MDS.log("Checked for expired MLS");
         });
     }

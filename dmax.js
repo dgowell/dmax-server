@@ -33,21 +33,26 @@ function createDB(callback) {
 * Check for expired MLS
 */
 function checkExpiredMLS(callback) {
+    //MDS.log("Checking for expired MLS");
+
     //Get the UNIX timestamp
     var now = Math.floor(Date.now() / 1000);
 
     //Select all the expired clients
     selectExpiredClients(now, function (sqlmsg) {
         //Loop through them
+        if (sqlmsg.rows.length > 0) {
+            MDS.log("Found " + sqlmsg.rows.length + " expired clients");
+        }
         for (var i = 0; i < sqlmsg.rows.length; i++) {
             var row = sqlmsg.rows[i];
             //delete each one
-            deleteClient(row.publickey, function (msg) {
-                MDS.log("Deleted expired client from db" + row.publickey);
+            deleteClient(row['PUBLICKEY'], function (msg) {
+                MDS.log("Deleted expired client from db" + row['PUBLICKEY']);
             });
             //remove client permanent address
-            removePermanentAddress(row.publickey, function (msg) {
-                MDS.log("Removed permanent address for " + row.publickey);
+            removePermanentAddress(row['PUBLICKEY'], function (msg) {
+                MDS.log("Removed permanent address for " + row['PUBLICKEY']);
             });
         }
     });
@@ -62,7 +67,8 @@ function checkExpiredMLS(callback) {
  * Select All the recent clients
  */
 function selectExpiredClients(time, callback) {
-    MDS.sql("SELECT * FROM CLIENTS WHERE expirydate>" + time, function (sqlmsg) {
+    //MDS.log("Selecting expired clients");
+    MDS.sql("SELECT * FROM CLIENTS WHERE expirydate<" + time, function (sqlmsg) {
         callback(sqlmsg);
     });
 }
@@ -85,8 +91,10 @@ function selectClient(pk, callback) {
  * Delete a Single Client form the DB
  */
 function deleteClient(pk, callback) {
+    MDS.log("Deleting client from db: " + pk);
     MDS.sql("DELETE FROM CLIENTS WHERE publickey='" + pk + "'", function (sqlmsg) {
         if (callback) {
+            MDS.log("Deleted client from db" + pk);
             callback(sqlmsg);
         }
     });
@@ -138,10 +146,12 @@ function addPermanentAddress(pk, callback) {
  * Remove  expired client
  */
 function removePermanentAddress(pk, callback) {
+    MDS.log("Removing permanent address for " + pk);
     var maxcmd = "maxextra action:removepermanent publickey:" + pk;
     MDS.cmd(maxcmd, function (msg) {
         MDS.log(JSON.stringify(msg));
         if (callback) {
+            MDS.log("Removed permanent address: " + JSON.stringify(msg));
             callback(msg);
         }
     });
@@ -169,7 +179,7 @@ function sendMaximaMessage(message, address, callback) {
 function getCoin(coinId, callback) {
     var maxcmd = "coins coinid:" + coinId;
     MDS.cmd(maxcmd, function (msg) {
-        MDS.log(`Coin Data: ${JSON.stringify(msg)}`);
+        MDS.log(`Get Coin: ${JSON.stringify(msg)}`);
         if (callback) {
             callback(msg);
         }
@@ -186,13 +196,22 @@ function getCoin(coinId, callback) {
 function setExpiryDate(pk, days, callback) {
     //get unix timestamp
     var now = Math.floor(Date.now() / 1000);
-    MDS.log("Days passed in: " + days);
+    //MDS.log("Now: " + now);
+    //convert unixtimestam to time and date
+    var date = new Date(now * 1000);
+    MDS.log("Now Date: " + date);
+    //  MDS.log("Days passed in: " + days);
     //convert whole number amount int   o days
     unixDays = days * 86400;
 
     //and add to now
-    var expirydate = now + unixDays;
-    MDS.log("Expiry Date: " + expirydate);
+    //var expirydate = now + unixDays;
+    //var expirydate = now + 60000;
+
+    //3mins in unixtime
+    var expirydate = now + 180000;
+
+    MDS.log("Expirydate: " + new Date(expirydate * 1000));
     //update expirydate
     updateExpiryDate(pk, expirydate, function (sqlmsg) {
         if (callback) {
@@ -241,7 +260,9 @@ function storePayment(pk, amount, coinId, callback) {
 function getUnconfirmedPayments(callback) {
     var sql = "SELECT * FROM CLIENTS WHERE confirmed=false";
     MDS.sql(sql, function (msg) {
-        MDS.log(`Response from getUnconfirmedPayments: ${JSON.stringify(msg)}`);
+        if (msg.count > 0) {
+            MDS.log(`Response from getUnconfirmedPayments: ${JSON.stringify(msg)}`);
+        }
         if (callback) {
             callback(msg);
         }
