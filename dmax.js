@@ -202,7 +202,7 @@ function setExpiryDate(pk, days, callback) {
     MDS.log("Now Date: " + date);
     //  MDS.log("Days passed in: " + days);
     //convert whole number amount int   o days
-    unixDays = days * 86400;
+    var unixDays = days * 86400;
 
     //and add to now
     var expirydate = now + unixDays;
