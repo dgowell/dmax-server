@@ -111,17 +111,20 @@ MDS.init(function (msg) {
         //Check for unconfirmed payments
         getUnconfirmedPayments(function (sqlmsg) {
             if (logs) {
-                MDS.log("confirmed payments: " + JSON.stringify(sqlmsg));
+                MDS.log("All clients with unconfirmed payments: " + JSON.stringify(sqlmsg));
             }
+
             for (var i = 0; i < sqlmsg.rows.length; i++) {
                 var row = sqlmsg.rows[i];
                 var clientPK = row['PUBLICKEY'];
                 var coinIdFromClient = row['COINID'];
                 MDS.log("Checking coin: " + coinIdFromClient);
                 MDS.log("Checking client: " + clientPK);
+
                 getCoin(coinIdFromClient, function (coin) {
                     if (coin.response.length > 0) {
                         MDS.log("Coin is confirmed: " + coin.response[0].amount);
+
                         updateConfirmed(clientPK, function (msg) {
                             MDS.log("Updated confirmed for: " + clientPK);
                         });

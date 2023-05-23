@@ -68,7 +68,7 @@ function checkExpiredMLS(callback) {
  */
 function selectExpiredClients(time, callback) {
     //MDS.log("Selecting expired clients");
-    MDS.sql("SELECT * FROM CLIENTS WHERE expirydate<" + time, function (sqlmsg) {
+    MDS.sql("SELECT * FROM CLIENTS WHERE expirydate<" + time + " AND confirmed=true", function (sqlmsg) {
         callback(sqlmsg);
     });
 }
@@ -205,11 +205,11 @@ function setExpiryDate(pk, days, callback) {
     unixDays = days * 86400;
 
     //and add to now
-    //var expirydate = now + unixDays;
+    var expirydate = now + unixDays;
     //var expirydate = now + 60000;
 
     //3mins in unixtime
-    var expirydate = now + 180000;
+    //var expirydate = now + 180;
 
     MDS.log("Expirydate: " + new Date(expirydate * 1000));
     //update expirydate
