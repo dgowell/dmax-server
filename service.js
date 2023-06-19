@@ -62,8 +62,6 @@ MDS.init(function (msg) {
                     if (logs) {
                         MDS.log("P2P_REQUEST message received from " + clientPK);
                     }
-                    // Get the amount from the original P2P_REQUEST
-                    var amount = json.data.amount;
                     var contact = json.data.contact;
 
                     //get p2pidentity
@@ -73,7 +71,7 @@ MDS.init(function (msg) {
                         }
 
                         // Send response to client via maxima, including the amount
-                        sendMaximaMessage({ "type": "P2P_RESPONSE", "data": { "status": "OK", "amount": amount, "p2pidentity": p2pIdentity } }, contact, function (msg) {
+                        sendMessage({ "type": "P2P_RESPONSE", "data": { "status": "OK", "p2pidentity": p2pIdentity } }, contact, function (msg) {
                             if (logs) {
                                 MDS.log("Sent response to " + contact);
                             }
@@ -152,11 +150,11 @@ MDS.init(function (msg) {
                                     var permAddress = `MAX#${clientPK}#${p2pIdentity}`;
 
                                     // Send response to client via maxima
-                                    sendMaximaMessage({ "type": "EXPIRY_DATE", "data": { "status": "OK", "expiry_date": expirydate, "permanent_address": permAddress } }, permAddress, function (msg) {
+                                    sendMessage({ "type": "EXPIRY_DATE", "data": { "status": "OK", "expiry_date": expirydate, "permanent_address": permAddress } }, permAddress, function (msg) {
                                         if (logs) {
                                             MDS.log("Sent expiry date to " + clientPK);
                                         }
-                                    }); //sendMaximaMessage
+                                    }); //sendMessage
                                 });
                             }); //setExpiryDate
                         }); //addPermanentAddress

@@ -160,7 +160,7 @@ function removePermanentAddress(pk, callback) {
 /**
  * Send message via Maxima to contat address or permanent address
  */
-function sendMaximaMessage(message, address, callback) {
+function sendMessage(message, address, callback) {
     var maxcmd = "maxima action:send poll:true to:" + address + " application:dmax data:" + JSON.stringify(message);
     MDS.cmd(maxcmd, function (msg) {
         MDS.log(JSON.stringify(msg));
