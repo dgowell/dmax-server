@@ -4,6 +4,8 @@
 * @dgowell
 */
 
+//Are we logging data
+var logs = true;
 
 /**
  * Create the main SQL DB
@@ -17,7 +19,8 @@ function createDB(callback) {
         + "  `expirydate` bigint NOT NULL, "
         + "  `createdat` bigint NOT NULL, "
         + "  `amount` bigint NOT NULL, "
-        + "  `coinid` varchar(512) NOT NULL, "
+        + "  `coinid` varchar(512), "
+        + "  `purchase_code` varchar(20), "
         + "  `confirmed` boolean NOT NULL default false "
         + " )";
 
@@ -87,6 +90,7 @@ function selectClient(pk, callback) {
     });
 }
 
+
 /**
  * Delete a Single Client form the DB
  */
@@ -99,6 +103,7 @@ function deleteClient(pk, callback) {
         }
     });
 }
+
 
 /**
  * Set end date on client
@@ -115,6 +120,7 @@ function updateExpiryDate(pk, expirydate, callback) {
     });
 }
 
+
 /**
  * Add a client
  * @param {*} pk
@@ -127,7 +133,6 @@ function addClient(pk, callback) {
         }
     });
 }
-
 
 /**
  * Add client pk to create permanent address
@@ -169,6 +174,7 @@ function sendMessage(message, address, callback) {
         }
     });
 }
+
 
 /**
  * Confirm coin exists and return the coin data response
@@ -242,9 +248,18 @@ function getP2PIdentity(callback) {
  * @param {*} coinId
  * @param {*} callback
  */
-function storePayment(pk, amount, coinId, callback) {
+
+function storePayment({ publickey, amount, coinId, purchaseCode, callback }) {
+    const coinKey = coinId ? `coinid, ` : "";
+    const coinValue = coinId ? `'${coinId}', ` : "";
+    const purchaseKey = purchaseCode ? `purchase_code,` : "";
+    const purchaseValue = purchaseCode ? `'${purchaseCode}', ` : "";
     var now = Math.floor(Date.now() / 1000);
-    var initsql = "INSERT INTO CLIENTS (publickey,expirydate,createdat,amount,coinid,confirmed) VALUES ('" + pk + "',0," + now + "," + amount + ",'" + coinId + "',false)";
+
+    var initsql =
+        `INSERT INTO CLIENTS (publickey,expirydate,createdat,amount,${coinKey}${purchaseKey}confirmed)
+    VALUES ('${publickey}',${0},${now},${amount},${coinValue}${purchaseValue}${false})`;
+
     MDS.sql(initsql, function (msg) {
         MDS.log(`Response from storePayment: ${JSON.stringify(msg)}`);
         if (callback) {
@@ -278,4 +293,39 @@ function updateConfirmed(pk, callback) {
             callback(msg);
         }
     });
+}
+
+function getHistoryTransactions(callback) {
+    if (logs) { MDS.log('Search history for purchase code'); }
+    MDS.cmd(`history`, function (res) {
+        if (res.status === true) {
+            callback(res.response.txpows);
+        }
+        else { callback([]); }
+    });
+}
+
+/*
+* Returns the coin that has the purchase code
+* @param {string} purchaseCode - the purchase code
+* @param {array} transactions - the transactions array
+* @param {function} callback - the callback function
+*/
+function confirmCoin(purchaseCode, transactions, callback) {
+    if (logs) { MDS.log(`Confirming coin for purchase code: ${purchaseCode}`); }
+    var response = null;
+    transactions.forEach(function (transaction) {
+        //if (logs) { MDS.log(`Transaction: ${JSON.stringify(transaction.body.txn.state)}`); }
+        if (transaction.body.txn.state[0]) {
+            if (transaction.body.txn.state[0].data) {
+                //MDS.log(`Transaction: ${JSON.stringify(transaction.body.txn.state[0].data)}`);
+
+                if (transaction.body.txn.state[0].data === "[" + purchaseCode + "]") {
+                    if (logs) { MDS.log(`Coin confirmed: ${JSON.stringify(transaction.body.txn.outputs[0].coinid)}`); }
+                    response = transaction.body.txn.outputs[0];
+                }
+            }
+        }
+    });
+    callback(response);
 }
